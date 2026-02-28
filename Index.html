@@ -1,94 +1,105 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My Hub Key System</title>
-  <style>
-    body {
-      margin: 0; min-height: 100vh; display: grid; place-items: center;
-      background: radial-gradient(900px 500px at 10% 10%, #1b2050, transparent),
-                  radial-gradient(900px 500px at 90% 90%, #2b1b50, transparent),
-                  #0f1220;
-      color: #e7e9ff; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-    }
-    .card {
-      width: min(420px, 92vw); background: #151936; border-radius: 16px;
-      padding: 18px; box-shadow: 0 20px 40px rgba(0,0,0,.35);
-    }
-    h1 { margin: 0 0 10px; font-size: 1.2rem; }
-    p { margin: 0 0 12px; opacity: .85; }
-    input {
-      width: 100%; padding: 10px 12px; border-radius: 12px; border: none;
-      outline: none; background: #0f1220; color: #e7e9ff;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
-    }
-    button {
-      margin-top: 10px; width: 100%; padding: 10px 12px; border-radius: 12px;
-      border: none; cursor: pointer; font-weight: 600;
-      background: linear-gradient(180deg, #6b7cff, #5b6cff); color: #fff;
-      box-shadow: 0 10px 20px rgba(91,108,255,.35);
-    }
-    .result {
-      margin-top: 10px; font-family: ui-monospace, Menlo, Consolas, monospace;
-      background: rgba(0,0,0,.35); padding: 10px; border-radius: 12px; display: none;
-      word-break: break-all;
-    }
-    .ok { color: #9aa1ff; }
-    .bad { color: #ff7a7a; }
-  </style>
+<meta charset="UTF-8">
+<title>Голосование Netlify</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    background: url('https://i.pinimg.com/originals/55/01/60/5501609ee45d514d1f2c4a63502045e2.gif') center/cover no-repeat;
+    color: white;
+  }
+  h1 { margin-top: 50px; text-shadow: 2px 2px 5px black; }
+  button {
+    padding: 15px 30px;
+    margin: 15px;
+    font-size: 20px;
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    transition: transform 0.2s;
+  }
+  button:hover { transform: scale(1.1); }
+  #results { margin-top: 40px; font-size: 20px; }
+  .bar-container {
+    width: 60%;
+    background: rgba(0,0,0,0.5);
+    border-radius: 20px;
+    margin: 10px auto;
+    overflow: hidden;
+  }
+  .bar {
+    height: 40px;
+    line-height: 40px;
+    background: rgba(76, 175, 80, 0.8);
+    text-align: right;
+    padding-right: 10px;
+    width: 0%;
+    transition: width 0.5s ease;
+    border-radius: 20px 0 0 20px;
+    font-weight: bold;
+  }
+</style>
 </head>
 <body>
-  <div class="card">
-    <h1>Key System</h1>
-    <p>Введи ключ, чтобы получить loader.</p>
 
-    <input id="keyInput" placeholder="Введи ключ..." />
-    <button onclick="checkKey()">Проверить</button>
+<h1>Голосование</h1>
 
-    <div id="msg"></div>
-    <div id="result" class="result"></div>
+<button onclick="vote('kaz')">Қазақстан</button>
+<button onclick="vote('rus')">Русский</button>
+
+<div id="results">
+  <div>Қазақстан: <span id="kazCount">0</span></div>
+  <div class="bar-container">
+    <div class="bar" id="kazBar">0%</div>
   </div>
 
-  <script>
-    // ВСТАВЬ СЮДА Raw ссылку на keys.json
-    const KEYS_URL = "RAW_KEYS_URL";
+  <div>Русский: <span id="rusCount">0</span></div>
+  <div class="bar-container">
+    <div class="bar" id="rusBar">0%</div>
+  </div>
+</div>
 
-    // ВСТАВЬ СЮДА Raw ссылку на loader.lua
-    const LOADER_URL = "RAW_LOADER_URL";
+<script>
+async function vote(choice) {
+  const res = await fetch('/.netlify/functions/votes', {
+    method: 'POST',
+    body: JSON.stringify({ choice }),
+  });
+  const votes = await res.json();
+  updateResults(votes);
+}
 
-    async function checkKey() {
-      const key = document.getElementById("keyInput").value.trim();
-      const msg = document.getElementById("msg");
-      const res = document.getElementById("result");
+async function fetchVotes() {
+  const res = await fetch('/.netlify/functions/votes');
+  const votes = await res.json();
+  updateResults(votes);
+}
 
-      if (!key) {
-        msg.innerHTML = '<p class="bad">Введи ключ</p>';
-        res.style.display = "none";
-        return;
-      }
+function updateResults(votes) {
+  const total = votes.kaz + votes.rus;
+  const kazPercent = total ? Math.round((votes.kaz / total) * 100) : 0;
+  const rusPercent = total ? Math.round((votes.rus / total) * 100) : 0;
 
-      try {
-        const r = await fetch(KEYS_URL);
-        const data = await r.json();
-        const keys = data.keys || [];
+  document.getElementById('kazCount').innerText = votes.kaz;
+  document.getElementById('rusCount').innerText = votes.rus;
 
-        if (keys.map(String).includes(String(key))) {
-          const loader = `loadstring(game:HttpGet("${LOADER_URL}"))()`;
-          msg.innerHTML = '<p class="ok">Ключ верный. Скопируй loader:</p>';
-          res.textContent = loader;
-          res.style.display = "block";
+  document.getElementById('kazBar').style.width = kazPercent + '%';
+  document.getElementById('kazBar').innerText = kazPercent + '%';
 
-          navigator.clipboard.writeText(loader);
-        } else {
-          msg.innerHTML = '<p class="bad">Неверный ключ</p>';
-          res.style.display = "none";
-        }
-      } catch (e) {
-        msg.innerHTML = '<p class="bad">Ошибка загрузки ключей</p>';
-        res.style.display = "none";
-      }
-    }
-  </script>
+  document.getElementById('rusBar').style.width = rusPercent + '%';
+  document.getElementById('rusBar').innerText = rusPercent + '%';
+}
+
+// обновляем каждые 2 секунды, чтобы все видели новые голоса
+setInterval(fetchVotes, 2000);
+fetchVotes();
+</script>
+
 </body>
 </html>
